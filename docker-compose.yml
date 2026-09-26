@@ -13,5 +13,6 @@ services:
       POSTGRES_USER: aegismind
       POSTGRES_PASSWORD: aegismind
     ports: ["5432:5432"]
-  postgres:
-    image: postgres:16-alpine
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
