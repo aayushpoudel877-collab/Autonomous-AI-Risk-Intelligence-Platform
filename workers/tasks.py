@@ -1,11 +1,13 @@
 import os
+
 try:
     from celery import Celery
 except ImportError:
     Celery=None
 
 def create_celery():
-    if Celery is None: raise ImportError("Celery is required. Install aegismind[workers].")
+    if Celery is None:
+        raise ImportError("Celery is required. Install aegismind[workers].")
     broker=os.getenv("CELERY_BROKER_URL","redis://redis:6379/0")
     return Celery("aegismind",broker=broker,backend=broker)
 
@@ -15,3 +17,9 @@ if celery_app is not None:
     @celery_app.task
     def health_check_task():
         return {"status":"ok","worker":"aegismind"}
+
+    @celery_app.task
+    def assess_retraining_task(reference,current):
+        from ml.retraining import assess_retraining
+        result=assess_retraining(reference,current)
+        return {"psi":result.psi,"status":result.status,"should_retrain":result.should_retrain,"reason":result.reason}
