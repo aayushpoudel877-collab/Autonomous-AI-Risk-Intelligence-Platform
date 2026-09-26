@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aegismind"
-version = "0.2.0"
+version = "0.3.0"
 description = "Autonomous multimodal AI risk intelligence platform"
 requires-python = ">=3.11"
 dependencies = [
@@ -14,6 +14,7 @@ dependencies = [
   "numpy>=1.26,<3",
   "pandas>=2.2,<3",
   "scikit-learn>=1.5,<2",
+  "sqlalchemy>=2.0,<3",
 ]
 
 [project.optional-dependencies]
@@ -21,7 +22,7 @@ dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.11", "httpx>=0.27"]
 deep-learning = ["torch>=2.3,<3"]
 nlp = ["transformers>=4.45,<5", "torch>=2.3,<3"]
 vision = ["torchvision>=0.18,<1", "torch>=2.3,<3"]
-full-ml = ["torch>=2.3,<3", "transformers>=4.45,<5", "torchvision>=0.18,<1]
+full-ml = ["torch>=2.3,<3", "transformers>=4.45,<5", "torchvision>=0.18,<1"]
 
 [tool.ruff]
 line-length = 100
