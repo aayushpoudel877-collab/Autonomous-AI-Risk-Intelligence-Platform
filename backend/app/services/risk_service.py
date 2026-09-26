@@ -1,13 +1,10 @@
 from statistics import mean
-from backend.app.schemas.risk import RiskAnalysisRequest, RiskAnalysisResponse
+from backend.app.schemas.risk import RiskAnalysisRequest,RiskAnalysisResponse
+from ml.risk_engine import RiskEngine
 
-def analyze_risk(payload: RiskAnalysisRequest) -> RiskAnalysisResponse:
-    values = [max(0.0, min(1.0, value)) for value in payload.signals]
-    score = round(mean(values) * 100, 2)
-    level = "low" if score < 35 else "medium" if score < 70 else "high"
-    confidence = round(min(0.99, 0.55 + 0.08 * len(values)), 2)
-    factors = [
-        "aggregate signal intensity" if values else "no signal",
-        "multi-signal consistency" if len(values) > 1 else "single-signal assessment",
-    ]
-    return RiskAnalysisResponse(risk_score=score, risk_level=level, confidence=confidence, source=payload.source, factors=factors)
+def analyze_risk(payload:RiskAnalysisRequest)->RiskAnalysisResponse:
+    signals=[max(0,min(1,v)) for v in payload.signals]
+    names={f"signal_{i}":v for i,v in enumerate(signals)}
+    decision=RiskEngine().assess({"tabular":mean(signals),"temporal":max(signals),"text":min(signals),"image":mean(signals)})
+    factors=[f"{k}: {v:.2f}" for k,v in names.items()]
+    return RiskAnalysisResponse(risk_score=round(decision.score*100,2),risk_level=decision.level,confidence=decision.confidence,source=payload.source,factors=factors)
