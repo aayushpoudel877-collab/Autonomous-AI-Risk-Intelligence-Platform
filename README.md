@@ -49,3 +49,10 @@ For worker infrastructure:
 The next stages are planned around learned cross-modal attention, stronger sequence models, model comparison, experiment tracking, drift-aware retraining, Prometheus/OpenTelemetry integration, Kubernetes deployment, security hardening and reproducible benchmark suites.
 
 This repository is a research/engineering system. Risk scores are model outputs, not facts or causal conclusions, and high-impact decisions require appropriate human review and domain-specific validation.
+
+
+## Intelligence Layer
+
+The intelligence subsystem provides document ingestion, evidence retrieval, investigations, knowledge-graph relationships, and temporal event reasoning. Retrieval and graph components expose stable interfaces for future embedding models, vector stores, and graph databases.
+
+Knowledge and timeline APIs are available under `/api/v1/knowledge`. Evidence should be treated as investigation context rather than proof of causality.
