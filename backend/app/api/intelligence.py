@@ -2,9 +2,11 @@ from fastapi import APIRouter
 from pydantic import BaseModel,Field
 from ml.intelligence.documents import ingest_text
 from ml.intelligence.investigation import InvestigationEngine
+from ml.intelligence.embeddings import RetrievalIndex
+from ml.intelligence.entities import extract_entities,extract_relations
 
 router=APIRouter(prefix="/intelligence",tags=["intelligence"])
-_STORE=[]
+_STORE=[]; _INDEX=RetrievalIndex()
 
 class DocumentRequest(BaseModel):
     text:str=Field(min_length=1)
@@ -18,13 +20,20 @@ class InvestigationRequest(BaseModel):
 @router.post("/documents")
 def add_document(payload:DocumentRequest):
     chunks=ingest_text(payload.text,payload.source)
-    _STORE.extend(chunks)
+    _STORE.extend(chunks); _INDEX.add(chunks)
     return {"document_id":chunks[0].document_id,"chunks_created":len(chunks)}
 
 @router.post("/investigations")
 def investigate(payload:InvestigationRequest):
-    result=InvestigationEngine(_STORE).investigate(payload.investigation_id,payload.query,payload.top_k)
-    return result
+    return InvestigationEngine(_STORE,_INDEX).investigate(payload.investigation_id,payload.query,payload.top_k)
+
+@router.post("/reports")
+def report(payload:InvestigationRequest):
+    return InvestigationEngine(_STORE,_INDEX).report(payload.investigation_id,payload.query,payload.top_k)
+
+@router.post("/entities")
+def entities(payload:DocumentRequest):
+    return {"entities":[e.__dict__ for e in extract_entities(payload.text)],"relations":[r.__dict__ for r in extract_relations(payload.text)]}
 
 @router.get("/documents")
 def document_stats():
