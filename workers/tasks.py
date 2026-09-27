@@ -3,23 +3,38 @@ import os
 try:
     from celery import Celery
 except ImportError:
-    Celery=None
+    Celery = None
+
 
 def create_celery():
     if Celery is None:
         raise ImportError("Celery is required. Install aegismind[workers].")
-    broker=os.getenv("CELERY_BROKER_URL","redis://redis:6379/0")
-    return Celery("aegismind",broker=broker,backend=broker)
+    broker = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
+    return Celery("aegismind", broker=broker, backend=broker)
 
-celery_app=create_celery() if Celery is not None else None
+
+celery_app = create_celery() if Celery is not None else None
+
+
+def assess_retraining(reference, current):
+    from ml.retraining import assess_retraining as _assess_retraining
+    result = _assess_retraining(reference, current)
+    return {
+        "psi": result.psi,
+        "status": result.status,
+        "should_retrain": result.should_retrain,
+        "reason": result.reason,
+    }
+
 
 if celery_app is not None:
     @celery_app.task
     def health_check_task():
-        return {"status":"ok","worker":"aegismind"}
+        return {"status": "ok", "worker": "aegismind"}
 
     @celery_app.task
-    def assess_retraining_task(reference,current):
-        from ml.retraining import assess_retraining
-        result=assess_retraining(reference,current)
-        return {"psi":result.psi,"status":result.status,"should_retrain":result.should_retrain,"reason":result.reason}
+    def assess_retraining_task(reference, current):
+        return assess_retraining(reference, current)
+else:
+    def assess_retraining_task(reference, current):
+        return assess_retraining(reference, current)
