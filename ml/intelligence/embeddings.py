@@ -16,10 +16,7 @@ class EmbeddingProvider(ABC):
 
 
 class HashEmbeddingProvider(EmbeddingProvider):
-    """Deterministic, dependency-light fallback embedding provider.
-
-    This is a lexical hashing baseline, not a semantic language model.
-    """
+    """Deterministic lexical hashing fallback; not a semantic language model."""
 
     def __init__(self, dimensions=128):
         if dimensions < 1:
@@ -41,6 +38,31 @@ class HashEmbeddingProvider(EmbeddingProvider):
             norm = np.linalg.norm(vector)
             vectors.append(vector / norm if norm else vector)
         return np.asarray(vectors)
+
+
+class SentenceTransformerProvider(EmbeddingProvider):
+    """Optional learned embedding provider backed by sentence-transformers."""
+
+    def __init__(self, model_name="all-MiniLM-L6-v2"):
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError as exc:
+            raise ImportError(
+                "Install aegismind[embeddings] to use SentenceTransformerProvider."
+            ) from exc
+        self.model_name = model_name
+        self.model = SentenceTransformer(model_name)
+        self._dimensions = int(self.model.get_sentence_embedding_dimension())
+
+    @property
+    def dimensions(self):
+        return self._dimensions
+
+    def encode(self, texts):
+        vectors = self.model.encode(
+            list(texts), normalize_embeddings=True, convert_to_numpy=True
+        )
+        return np.asarray(vectors, dtype=float)
 
 
 class RetrievalIndex:
@@ -67,8 +89,4 @@ class RetrievalIndex:
         query_vector = self.provider.encode([query])[0]
         scores = self.vectors @ query_vector
         order = np.argsort(-scores, kind="stable")[:top_k]
-        return [
-            (self.chunks[i], float(scores[i]))
-            for i in order
-            if scores[i] > 0
-        ]
+        return [(self.chunks[i], float(scores[i])) for i in order if scores[i] > 0]
