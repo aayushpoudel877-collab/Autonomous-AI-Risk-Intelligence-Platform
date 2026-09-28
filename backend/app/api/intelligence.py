@@ -8,6 +8,7 @@ from ml.intelligence.entities import extract_entities, extract_relations
 from ml.intelligence.investigation import InvestigationEngine
 from ml.intelligence.multimodal import MultimodalEvidenceStore
 from ml.intelligence.vector_store import SQLiteVectorStore
+from ml.intelligence.citations import synthesize_investigation, validate_citations
 
 router = APIRouter(prefix="/intelligence", tags=["intelligence"])
 _VECTOR_DB = os.getenv("AEGISMIND_VECTOR_DB", "data/vector_store.db")
@@ -51,6 +52,19 @@ def investigate(payload: InvestigationRequest):
     result = InvestigationEngine(persistent_index=_STORE).investigate(
         payload.investigation_id, payload.query, payload.top_k)
     return asdict(result)
+
+@router.post("/synthesis")
+def synthesis(payload: InvestigationRequest):
+    investigation = InvestigationEngine(persistent_index=_STORE).investigate(
+        payload.investigation_id, payload.query, payload.top_k)
+    result = synthesize_investigation(investigation)
+    return {
+        "query": result.query,
+        "claims": [asdict(c) for c in result.claims],
+        "generated_at": result.generated_at,
+        "limitations": result.limitations,
+        "citation_errors": validate_citations(result),
+    }
 
 @router.post("/reports")
 def report(payload: InvestigationRequest):
