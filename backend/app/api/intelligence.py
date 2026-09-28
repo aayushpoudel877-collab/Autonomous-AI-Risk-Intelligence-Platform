@@ -9,6 +9,7 @@ from ml.intelligence.investigation import InvestigationEngine
 from ml.intelligence.multimodal import MultimodalEvidenceStore
 from ml.intelligence.vector_store import SQLiteVectorStore
 from ml.intelligence.citations import synthesize_investigation, validate_citations
+from ml.intelligence.orchestration import AutonomousInvestigator
 
 router = APIRouter(prefix="/intelligence", tags=["intelligence"])
 _VECTOR_DB = os.getenv("AEGISMIND_VECTOR_DB", "data/vector_store.db")
@@ -24,6 +25,9 @@ class InvestigationRequest(BaseModel):
     investigation_id: str
     query: str = Field(min_length=1)
     top_k: int = Field(default=5, ge=1, le=20)
+
+class AutonomousInvestigationRequest(InvestigationRequest):
+    max_steps: int = Field(default=3, ge=1, le=6)
 
 class TabularRequest(BaseModel):
     record: dict
@@ -53,18 +57,21 @@ def investigate(payload: InvestigationRequest):
         payload.investigation_id, payload.query, payload.top_k)
     return asdict(result)
 
+@router.post("/investigations/autonomous")
+def autonomous_investigation(payload: AutonomousInvestigationRequest):
+    engine = InvestigationEngine(persistent_index=_STORE)
+    trace = AutonomousInvestigator(engine).run(
+        payload.investigation_id, payload.query, payload.max_steps, payload.top_k)
+    return trace.as_dict()
+
 @router.post("/synthesis")
 def synthesis(payload: InvestigationRequest):
     investigation = InvestigationEngine(persistent_index=_STORE).investigate(
         payload.investigation_id, payload.query, payload.top_k)
     result = synthesize_investigation(investigation)
-    return {
-        "query": result.query,
-        "claims": [asdict(c) for c in result.claims],
-        "generated_at": result.generated_at,
-        "limitations": result.limitations,
-        "citation_errors": validate_citations(result),
-    }
+    return {"query": result.query, "claims": [asdict(c) for c in result.claims],
+            "generated_at": result.generated_at, "limitations": result.limitations,
+            "citation_errors": validate_citations(result)}
 
 @router.post("/reports")
 def report(payload: InvestigationRequest):
