@@ -30,7 +30,7 @@ def test_adaptive_planner_selects_missing_objective():
     )
     assert step is not None
     assert aspect == "cause"
-    assert "impact" in step.query
+    assert "cause" in step.query
 
 
 def test_graph_temporal_and_provenance_coverage():
