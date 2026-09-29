@@ -9,7 +9,10 @@ from ml.intelligence.investigation import InvestigationEngine
 from ml.intelligence.multimodal import MultimodalEvidenceStore
 from ml.intelligence.vector_store import SQLiteVectorStore
 from ml.intelligence.citations import synthesize_investigation, validate_citations
-from ml.intelligence.orchestration import AutonomousInvestigator
+from ml.intelligence.orchestration import (
+    AutonomousInvestigator,
+    InvestigationObjective,
+)
 
 router = APIRouter(prefix="/intelligence", tags=["intelligence"])
 _VECTOR_DB = os.getenv("AEGISMIND_VECTOR_DB", "data/vector_store.db")
@@ -28,6 +31,15 @@ class InvestigationRequest(BaseModel):
 
 class AutonomousInvestigationRequest(InvestigationRequest):
     max_steps: int = Field(default=3, ge=1, le=6)
+
+class AdaptiveInvestigationRequest(InvestigationRequest):
+    max_steps: int = Field(default=6, ge=1, le=10)
+    min_evidence: int = Field(default=3, ge=1, le=50)
+    required_aspects: list[str] = Field(
+        default_factory=lambda: ["cause", "impact", "timeline"],
+        min_length=1,
+        max_length=6,
+    )
 
 class TabularRequest(BaseModel):
     record: dict
@@ -62,6 +74,22 @@ def autonomous_investigation(payload: AutonomousInvestigationRequest):
     engine = InvestigationEngine(persistent_index=_STORE)
     trace = AutonomousInvestigator(engine).run(
         payload.investigation_id, payload.query, payload.max_steps, payload.top_k)
+    return trace.as_dict()
+
+@router.post("/investigations/adaptive")
+def adaptive_investigation(payload: AdaptiveInvestigationRequest):
+    objective = InvestigationObjective(
+        name=f"adaptive:{payload.investigation_id}",
+        required_aspects=tuple(payload.required_aspects),
+        min_evidence=payload.min_evidence,
+    )
+    trace = AutonomousInvestigator(InvestigationEngine(persistent_index=_STORE)).run_adaptive(
+        payload.investigation_id,
+        payload.query,
+        payload.max_steps,
+        payload.top_k,
+        objective,
+    )
     return trace.as_dict()
 
 @router.post("/synthesis")
