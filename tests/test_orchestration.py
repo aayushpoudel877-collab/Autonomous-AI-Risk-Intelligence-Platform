@@ -29,7 +29,7 @@ def test_adaptive_planner_selects_missing_objective():
         set(), objective
     )
     assert step is not None
-    assert aspect == "impact"
+    assert aspect == "cause"
     assert "impact" in step.query
 
 
