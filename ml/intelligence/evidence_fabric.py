@@ -146,6 +146,13 @@ class EvidenceFabric:
             graph.add_edge(Edge(*row))
         return graph
 
+    def add_provenance(self, evidence_id: str, node_id: str, relation: str = "supports", confidence: float = 1.0):
+        if self.get_evidence(evidence_id) is None:
+            raise KeyError(evidence_id)
+        if self.graph().nodes.get(node_id) is None:
+            self.add_node(Node(node_id, "context", node_id))
+        return self.add_edge(Edge(evidence_id, relation, node_id, max(0.0, min(1.0, float(confidence)))))
+
     def provenance_links(self):
         with self._connect() as connection:
             rows = connection.execute(
